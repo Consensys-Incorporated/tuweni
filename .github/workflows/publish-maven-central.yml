@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: publish
     container:
-      image: consensys/tuweni-build:1.3
+      image: consensys/tuweni-build:1.3@sha256:1333a39ae41bd6bf752ff0c0fe99cd95d8874cd9cc55ce7efbb0b3c0e8007e82
     permissions:
       contents: write
       # TODO might not need these permissions below
