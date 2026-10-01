@@ -12,6 +12,7 @@ import static org.mockito.Mockito.mock;
 
 import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.Random;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -81,6 +82,69 @@ class ConcatenatedBytesTest {
     assertEquals("0x01234567", bytes.slice(8, 4).toHexString());
     assertEquals("0x456789abcdef", bytes.slice(10, 6).toHexString());
     assertEquals("0x89abcdef", bytes.slice(12, 4).toHexString());
+  }
+
+  @Test
+  void shouldSliceEndingPartwayThroughLaterValue() {
+    Bytes part = fromHexString("0x00010203040506070809");
+    Bytes slice = wrap(part, part, part).slice(5, 22);
+    assertEquals(22, slice.size());
+    assertEquals("0x05060708090001020304050607080900010203040506", slice.toHexString());
+    assertArrayEquals(slice.toArray(), slice.copy().toArrayUnsafe());
+  }
+
+  @Test
+  void shouldNotBeAffectedByReplacingWrappedArrayElements() {
+    Bytes[] values = new Bytes[] {fromHexString("0x0102"), fromHexString("0x0304")};
+    Bytes bytes = wrap(values);
+    values[0] = fromHexString("0x01");
+    values[1] = fromHexString("0x020304");
+    assertEquals(2, bytes.get(1));
+    assertEquals("0x0203", bytes.slice(1, 2).toHexString());
+    assertArrayEquals(new byte[] {1, 2, 3, 4}, bytes.toArray());
+  }
+
+  @Test
+  void shouldHandleEmptyValues() {
+    Bytes inner = wrap(fromHexString("0x0102"), fromHexString("0x0304"));
+    Bytes bytes = wrap(Bytes.EMPTY, inner, Bytes.EMPTY, fromHexString("0x05"));
+    assertEquals(5, bytes.size());
+    for (int i = 0; i < 5; i++) {
+      assertEquals(i + 1, bytes.get(i));
+    }
+    assertEquals("0x0304", bytes.slice(2, 2).toHexString());
+    assertEquals("0x020304", bytes.slice(1, 3).toHexString());
+    assertEquals(fromHexString("0x0102030405"), bytes);
+  }
+
+  @Test
+  void shouldMatchFlatValue() {
+    Random random = new Random(42);
+    Bytes[] parts = new Bytes[50];
+    for (int k = 0; k < parts.length; k++) {
+      parts[k] = Bytes.random(random.nextInt(5), random);
+    }
+    Bytes concatenated = wrap(parts);
+    Bytes flat = Bytes.concatenate(parts);
+
+    assertEquals(flat, concatenated);
+    assertEquals(concatenated, flat);
+    assertEquals(flat.hashCode(), concatenated.hashCode());
+    for (int i = 0; i < flat.size(); i++) {
+      assertEquals(flat.get(i), concatenated.get(i));
+    }
+    for (int n = 0; n < 1000; n++) {
+      int start = random.nextInt(flat.size());
+      int length = random.nextInt(flat.size() - start + 1);
+      Bytes slice = concatenated.slice(start, length);
+      assertEquals(flat.slice(start, length), slice);
+      assertArrayEquals(flat.slice(start, length).toArray(), slice.toArray());
+    }
+
+    MutableBytes different = flat.mutableCopy();
+    different.set(flat.size() - 1, (byte) (flat.get(flat.size() - 1) + 1));
+    assertNotEquals(different, concatenated);
+    assertNotEquals(concatenated, different);
   }
 
   @Test
