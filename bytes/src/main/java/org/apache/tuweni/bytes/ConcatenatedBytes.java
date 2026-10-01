@@ -12,18 +12,18 @@ import java.util.List;
 final class ConcatenatedBytes extends AbstractBytes {
 
   private final Bytes[] values;
-  // ends[k] is the exclusive end offset of values[k] within this value
-  private final int[] ends;
+  // endIndices[k] is the exclusive end offset of values[k] within this value
+  private final int[] endIndices;
   private final int size;
 
   private ConcatenatedBytes(Bytes[] values, int totalSize) {
     this.values = values;
     this.size = totalSize;
-    this.ends = new int[values.length];
+    this.endIndices = new int[values.length];
     int end = 0;
     for (int k = 0; k < values.length; k++) {
       end += values[k].size();
-      ends[k] = end;
+      endIndices[k] = end;
     }
   }
 
@@ -167,20 +167,20 @@ final class ConcatenatedBytes extends AbstractBytes {
 
   /** Index of the part containing byte {@code i}. */
   private int partIndex(int i) {
-    int k = Arrays.binarySearch(ends, i);
+    int k = Arrays.binarySearch(endIndices, i);
     if (k < 0) {
       return -k - 1;
     }
     // An exact match means i is the first byte of a later part. Empty parts share the same end
     // offset, so skip past them.
-    while (ends[k] <= i) {
+    while (endIndices[k] <= i) {
       k++;
     }
     return k;
   }
 
   private int partStart(int k) {
-    return k == 0 ? 0 : ends[k - 1];
+    return k == 0 ? 0 : endIndices[k - 1];
   }
 
   @Override
