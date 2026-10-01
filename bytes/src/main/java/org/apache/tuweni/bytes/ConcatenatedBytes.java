@@ -57,7 +57,8 @@ final class ConcatenatedBytes extends AbstractBytes {
       return Bytes.EMPTY;
     }
     if (count == values.length) {
-      return new ConcatenatedBytes(values, totalSize);
+      // Copy, as part offsets are cached and the caller may replace elements of its array
+      return new ConcatenatedBytes(values.clone(), totalSize);
     }
 
     Bytes[] concatenated = new Bytes[count];

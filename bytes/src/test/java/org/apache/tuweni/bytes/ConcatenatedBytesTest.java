@@ -94,6 +94,17 @@ class ConcatenatedBytesTest {
   }
 
   @Test
+  void shouldNotBeAffectedByReplacingWrappedArrayElements() {
+    Bytes[] values = new Bytes[] {fromHexString("0x0102"), fromHexString("0x0304")};
+    Bytes bytes = wrap(values);
+    values[0] = fromHexString("0x01");
+    values[1] = fromHexString("0x020304");
+    assertEquals(2, bytes.get(1));
+    assertEquals("0x0203", bytes.slice(1, 2).toHexString());
+    assertArrayEquals(new byte[] {1, 2, 3, 4}, bytes.toArray());
+  }
+
+  @Test
   void shouldHandleEmptyValues() {
     Bytes inner = wrap(fromHexString("0x0102"), fromHexString("0x0304"));
     Bytes bytes = wrap(Bytes.EMPTY, inner, Bytes.EMPTY, fromHexString("0x05"));
