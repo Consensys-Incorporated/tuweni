@@ -6,16 +6,25 @@ import static org.apache.tuweni.bytes.Checks.checkArgument;
 import static org.apache.tuweni.bytes.Checks.checkElementIndex;
 
 import java.security.MessageDigest;
+import java.util.Arrays;
 import java.util.List;
 
 final class ConcatenatedBytes extends AbstractBytes {
 
   private final Bytes[] values;
+  // ends[k] is the exclusive end offset of values[k] within this value
+  private final int[] ends;
   private final int size;
 
   private ConcatenatedBytes(Bytes[] values, int totalSize) {
     this.values = values;
     this.size = totalSize;
+    this.ends = new int[values.length];
+    int end = 0;
+    for (int k = 0; k < values.length; k++) {
+      end += values[k].size();
+      ends[k] = end;
+    }
   }
 
   static Bytes wrap(Bytes... values) {
@@ -120,14 +129,8 @@ final class ConcatenatedBytes extends AbstractBytes {
   @Override
   public byte get(int i) {
     checkElementIndex(i, size);
-    for (Bytes value : values) {
-      int vSize = value.size();
-      if (i < vSize) {
-        return value.get(i);
-      }
-      i -= vSize;
-    }
-    throw new IllegalStateException("element sizes do not match total size");
+    int k = partIndex(i);
+    return values[k].get(i - partStart(k));
   }
 
   @Override
@@ -148,47 +151,35 @@ final class ConcatenatedBytes extends AbstractBytes {
         size - i,
         i);
 
-    int j = 0;
-    int vSize;
-    while (true) {
-      vSize = values[j].size();
-      if (i < vSize) {
-        break;
-      }
-      i -= vSize;
-      ++j;
+    int first = partIndex(i);
+    int last = partIndex(i + length - 1);
+    int firstOffset = i - partStart(first);
+    if (first == last) {
+      return values[first].slice(firstOffset, length);
     }
 
-    if ((i + length) < vSize) {
-      return values[j].slice(i, length);
-    }
-
-    int remaining = length - (vSize - i);
-    Bytes firstValue = this.values[j].slice(i);
-    int firstOffset = j;
-
-    while (remaining > 0) {
-      if (++j >= this.values.length) {
-        throw new IllegalStateException("element sizes do not match total size");
-      }
-      vSize = this.values[j].size();
-      if (length < vSize + firstValue.size()) {
-        break;
-      }
-      remaining -= vSize;
-    }
-
-    Bytes[] combined = new Bytes[j - firstOffset + 1];
-    combined[0] = firstValue;
-    if (remaining > 0) {
-      if (combined.length > 2) {
-        System.arraycopy(this.values, firstOffset + 1, combined, 1, combined.length - 2);
-      }
-      combined[combined.length - 1] = this.values[j].slice(0, remaining);
-    } else if (combined.length > 1) {
-      System.arraycopy(this.values, firstOffset + 1, combined, 1, combined.length - 1);
-    }
+    Bytes[] combined = Arrays.copyOfRange(values, first, last + 1);
+    combined[0] = values[first].slice(firstOffset);
+    combined[combined.length - 1] = values[last].slice(0, i + length - partStart(last));
     return new ConcatenatedBytes(combined, length);
+  }
+
+  /** Index of the part containing byte {@code i}. */
+  private int partIndex(int i) {
+    int k = Arrays.binarySearch(ends, i);
+    if (k < 0) {
+      return -k - 1;
+    }
+    // An exact match means i is the first byte of a later part. Empty parts share the same end
+    // offset, so skip past them.
+    while (ends[k] <= i) {
+      k++;
+    }
+    return k;
+  }
+
+  private int partStart(int k) {
+    return k == 0 ? 0 : ends[k - 1];
   }
 
   @Override
@@ -255,7 +246,45 @@ final class ConcatenatedBytes extends AbstractBytes {
   }
 
   @Override
+  public boolean equals(Object obj) {
+    if (obj == this) {
+      return true;
+    }
+    if (!(obj instanceof Bytes)) {
+      return false;
+    }
+    Bytes other = (Bytes) obj;
+    if (other.size() != size) {
+      return false;
+    }
+    int offset = 0;
+    for (Bytes value : values) {
+      int vSize = value.size();
+      for (int j = 0; j < vSize; j++) {
+        if (value.get(j) != other.get(offset + j)) {
+          return false;
+        }
+      }
+      offset += vSize;
+    }
+    return true;
+  }
+
+  @Override
+  protected int computeHashcode() {
+    int result = 1;
+    for (Bytes value : values) {
+      int vSize = value.size();
+      for (int j = 0; j < vSize; j++) {
+        result = 31 * result + value.get(j);
+      }
+    }
+    return result;
+  }
+
+  @Override
   public int hashCode() {
+    // Not cached, as the wrapped values may be mutable
     return computeHashcode();
   }
 }
