@@ -19,7 +19,7 @@ dependencyManagement {
     dependency('com.google.code.findbugs:jsr305:3.0.2')
     dependency('com.google.errorprone:error_prone_annotations:2.21.1')
     dependency('com.google.errorprone:error_prone_core:2.21.1')
-    dependency('com.google.guava:guava:32.1.2-jre')
+    dependency('com.google.guava:guava:33.7.2-jre')
     dependency('com.squareup.okhttp3:okhttp:5.0.0-alpha.11')
 
     dependencySet(group: 'io.vertx', version: '5.1.6') {
@@ -31,14 +31,14 @@ dependencyManagement {
       entry 'antlr4'
       entry 'antlr4-runtime'
     }
-    dependency('org.apache.lucene:lucene-core:9.7.0')
+    dependency('org.apache.lucene:lucene-core:10.5.2')
     dependency('org.assertj:assertj-core:3.24.2')
     dependencySet(group: 'org.bouncycastle', version: '1.70') {
       entry 'bcpkix-jdk15on'
       entry 'bcprov-jdk15on'
     }
 
-    dependencySet(group: 'org.junit.jupiter', version: '5.11.3') {
+    dependencySet(group: 'org.junit.jupiter', version: '6.1.3') {
       entry 'junit-jupiter-api'
       entry 'junit-jupiter-engine'
       entry 'junit-jupiter-params'
