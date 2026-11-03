@@ -72,6 +72,7 @@ class ConcatenatedBytesTest {
             fromHexString("0x89ABCDEF"));
     assertEquals("0x", bytes.slice(4, 0).toHexString());
     assertEquals("0x0123456789abcdef0123456789abcdef", bytes.slice(0, 16).toHexString());
+    assertEquals("0x0123456789abcdef0123456789ab", bytes.slice(0, 14).toHexString());
     assertEquals("0x01234567", bytes.slice(0, 4).toHexString());
     assertEquals("0x0123", bytes.slice(0, 2).toHexString());
     assertEquals("0x6789", bytes.slice(3, 2).toHexString());
