@@ -398,7 +398,7 @@ internal class ENRRequestPacket private constructor(
     fun create(keyPair: SECP256K1.KeyPair, now: Long): Packet {
       val expiration = expirationFor(now)
       val sigHash = createSignature(
-        PacketType.ENRRESPONSE,
+        PacketType.ENRREQUEST,
         keyPair,
       ) { writer ->
         encodeTo(writer, expiration)
