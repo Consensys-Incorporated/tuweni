@@ -2,16 +2,31 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.apache.tuweni.bytes;
 
+import static java.nio.ByteOrder.BIG_ENDIAN;
 import static org.apache.tuweni.bytes.Checks.checkArgument;
 import static org.apache.tuweni.bytes.Checks.checkElementIndex;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.security.MessageDigest;
 import java.util.Arrays;
 
 import io.vertx.core.buffer.Buffer;
 
 class ArrayWrappingBytes extends AbstractBytes {
+
+  // Unaligned multi-byte views over the backing array, one constant per (width, byte order), so
+  // that every access site below uses a handle that is a compile-time constant.
+  private static final VarHandle LONG_BIG_ENDIAN =
+      MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.BIG_ENDIAN);
+  private static final VarHandle LONG_LITTLE_ENDIAN =
+      MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.LITTLE_ENDIAN);
+  private static final VarHandle INT_BIG_ENDIAN =
+      MethodHandles.byteArrayViewVarHandle(int[].class, ByteOrder.BIG_ENDIAN);
+  private static final VarHandle INT_LITTLE_ENDIAN =
+      MethodHandles.byteArrayViewVarHandle(int[].class, ByteOrder.LITTLE_ENDIAN);
 
   protected final byte[] bytes;
   protected final int offset;
@@ -49,6 +64,38 @@ class ArrayWrappingBytes extends AbstractBytes {
     // for the caller.
     checkElementIndex(i, size());
     return bytes[offset + i];
+  }
+
+  @Override
+  public int getInt(int i, ByteOrder order) {
+    checkElementIndex(i, length);
+    if (i > length - 4) {
+      throw notEnoughBytes(i, 4, "int");
+    }
+    if (order == BIG_ENDIAN) {
+      return (int) INT_BIG_ENDIAN.get(bytes, offset + i);
+    }
+    return (int) INT_LITTLE_ENDIAN.get(bytes, offset + i);
+  }
+
+  @Override
+  public long getLong(int i, ByteOrder order) {
+    checkElementIndex(i, length);
+    if (i > length - 8) {
+      throw notEnoughBytes(i, 8, "long");
+    }
+    if (order == BIG_ENDIAN) {
+      return (long) LONG_BIG_ENDIAN.get(bytes, offset + i);
+    }
+    return (long) LONG_LITTLE_ENDIAN.get(bytes, offset + i);
+  }
+
+  // Kept out of line so that the read methods above stay small enough to be inlined.
+  private IndexOutOfBoundsException notEnoughBytes(int i, int width, String type) {
+    return new IndexOutOfBoundsException(
+        String.format(
+            "Value of size %s has not enough bytes to read a %s bytes %s from index %s",
+            length, width, type, i));
   }
 
   @Override
