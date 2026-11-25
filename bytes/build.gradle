@@ -10,6 +10,10 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
+plugins {
+  id 'me.champeau.jmh' version '0.7.3'
+}
+
 description = 'Classes and utilities for working with byte arrays.'
 
 dependencies {
@@ -25,4 +29,30 @@ dependencies {
   testImplementation 'org.mockito:mockito-junit-jupiter'
 
   testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+}
+
+//////
+// Micro-benchmarks (src/jmh). Run with `./gradlew :bytes:jmh`; narrow the selection with
+// `-PjmhIncludes=<regex>`. Results are written to build/results/jmh/results.json.
+
+jmh {
+  jmhVersion = '1.37'
+  benchmarkMode = ['avgt']
+  timeUnit = 'ns'
+  fork = 2
+  warmupIterations = 3
+  warmup = '1s'
+  iterations = 5
+  timeOnIteration = '1s'
+  failOnError = true
+  resultFormat = 'JSON'
+  if (project.hasProperty('jmhIncludes')) {
+    includes = [project.property('jmhIncludes')]
+  }
+}
+
+// The JMH-generated sources are not held to the project's lint and error-prone settings.
+tasks.named('jmhCompileGeneratedClasses', JavaCompile) {
+  options.errorprone.enabled = false
+  options.compilerArgs.remove('-Werror')
 }
