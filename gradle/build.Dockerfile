@@ -71,4 +71,11 @@ RUN set -o errexit -o nounset \
     && echo "Testing Gradle installation" \
     && gradle --version
 
-RUN apt-get update && apt-get install -y libsodium-dev gpg && apt-get clean
+# gpg-agent is only a recommend of gpg, but the gradle signing plugin's useGpgCmd() needs it
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends libsodium-dev gpg gpg-agent \
+    && rm -rf /var/lib/apt/lists/*
+
+# GitHub Actions job containers need root to write the mounted workspace, so the
+# workflows that use this image set `options: --user root` on their container.
+USER gradle

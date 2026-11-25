@@ -9,11 +9,13 @@
 # an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 # specific language governing permissions and limitations under the License.
 
-FROM openjdk:11.0.3-jre-stretch
+# Tuweni targets Java 21; the old openjdk:11 stretch base can no longer install packages
+FROM eclipse-temurin:21-jre
 
 RUN apt-get update \
- && apt-get install -y libsodium-dev \
- && rm -rf /var/lib/apt/lists/*
+ && apt-get install -y --no-install-recommends libsodium-dev \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd --system --create-home --uid 10001 tuweni
 
 COPY build/distributions/tuweni-bin-*.tgz /usr/tuweni.tgz
 RUN cd /usr \
@@ -21,5 +23,6 @@ RUN cd /usr \
   && mv /usr/tuweni-bin-* /usr/tuweni \
   && rm tuweni.tgz
 
+USER tuweni
 WORKDIR "/usr/tuweni/bin"
 ENTRYPOINT ["/usr/tuweni/bin/tuweni"]
